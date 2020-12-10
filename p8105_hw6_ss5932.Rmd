@@ -28,6 +28,8 @@ theme_set(theme_minimal() + theme(legend.position = "bottom"))
 
 ## Problem 1
 
+Read in and clean dataset of homicides in 50 large US cities from the *Washington Post.*
+
 ```{r}
 homicide_df = 
   read_csv("data/homicide-data.csv", na = c("", "NA", "Unknown")) %>% 
@@ -99,7 +101,7 @@ models_results_df %>%
 
 ## Problem 2
 
-#### Read in and clean the birthweight dataset. 
+Read in and clean the birthweight dataset. 
 
 ```{r}
 baby_df = 
@@ -124,6 +126,8 @@ I will examine three models to assess birthweight:
 2. Interactions model examining head circumference, length, sex, and all interactions between these predictors (including three-way interaction)
 3. Full model examining head circumference, length, sex, mother's race, mother's pre-pregnancy BMI, family income, number of cigarettes smoked per day during pregnancy
 
+<br>
+
 **1. Crude model including main predictors**
 
 - `blength`: baby's length at birth (cm)
@@ -144,6 +148,9 @@ crude_model %>%
 
 ```{r}
 inter_model = lm(bwt ~ bhead + blength + babysex + bhead * blength + bhead * babysex + blength * babysex, data = baby_df)
+
+inter_model %>% 
+  broom::glance()
 ```
 
 **3. Full model including variables**
@@ -158,6 +165,9 @@ inter_model = lm(bwt ~ bhead + blength + babysex + bhead * blength + bhead * bab
 
 ```{r}
 full_model = lm(bwt ~ bhead + blength + babysex + mrace + ppbmi + fincome + smoken, data = baby_df)
+
+full_model %>% 
+  broom::glance()
 ```
 
 
@@ -171,7 +181,7 @@ crude_plot =
   modelr::add_residuals(crude_model) %>% 
   modelr::add_predictions(crude_model) %>% 
   ggplot(aes(x = pred, y = resid)) +
-  geom_point(aes(alpha = 0.5)) +
+  geom_point(aes(alpha = 0.3)) +
   labs(
     title = "Residuals vs. predicted values for crude model",
     x = "Predicted values",
@@ -189,7 +199,7 @@ inter_plot =
   modelr::add_residuals(inter_model) %>% 
   modelr::add_predictions(inter_model) %>% 
   ggplot(aes(x = resid, y = pred)) +
-  geom_point(aes(alpha = 0.5)) + 
+  geom_point(aes(alpha = 0.3)) + 
   labs(
     title = "Residuals vs. predicted values for interaction model",
     x = "Predicted values",
@@ -207,7 +217,7 @@ full_plot =
   modelr::add_residuals(full_model) %>% 
   modelr::add_predictions(full_model) %>% 
   ggplot(aes(x = resid, y = pred)) +
-  geom_point(aes(alpha = 0.5)) + 
+  geom_point(aes(alpha = 0.3)) + 
   labs(
     title = "Residuals vs. predicted values for full model",
     x = "Predicted values",
