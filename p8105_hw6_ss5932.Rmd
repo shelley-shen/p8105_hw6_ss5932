@@ -99,7 +99,7 @@ models_results_df %>%
 
 ## Problem 2
 
-#### Load and clean the birthweight dataset. 
+#### Read in and clean the birthweight dataset. 
 
 ```{r}
 baby_df = 
@@ -118,7 +118,7 @@ baby_df =
 
 ### Fit the models
 
-We will examine three models to assess birthweight: 
+I will examine three models to assess birthweight: 
 
 1. Crude model examining length at birth and gestational age
 2. Interactions model examining head circumference, length, sex, and all interactions between these predictors (including three-way interaction)
@@ -217,9 +217,9 @@ full_plot =
 full_plot
 ```
 
-#3 Cross-validation of models
+### Cross-validation of models
 
-We will compare the full model with the crude and interaction models by:
+I will compare the full model with the crude and interaction models by:
 
 - Creating test-training pairs
 - Unpacking the pairs
@@ -262,6 +262,115 @@ cv_plot
 When comparing the violin plots of the root mean squared errors, it seems the full model which I hypothesized is the most predictive of the variable `birthweight` out of the three models since it has the lowest RMSE. 
 
 
+## Problem 3
+
+Read in and clean dataset from 2017 Central Park weather data. 
+
+```{r}
+weather_df = 
+  rnoaa::meteo_pull_monitors(
+    c("USW00094728"),
+    var = c("PRCP", "TMIN", "TMAX"), 
+    date_min = "2017-01-01",
+    date_max = "2017-12-31") %>%
+  mutate(
+    name = recode(id, USW00094728 = "CentralPark_NY"),
+    tmin = tmin / 10,
+    tmax = tmax / 10) %>%
+  select(name, id, everything())
+```
+
+Use bootstrapping to produce estimates for:
+
+- r^2
+- log(β0∗β1)
+
+```{r}
+weather_bootstrap = 
+  weather_df %>% 
+  modelr::bootstrap(n = 5000) %>%
+  mutate(
+    models = map(strap, ~lm(tmax ~ tmin, data = .x)),
+    results_rsq = map(models, broom::glance),
+    results_betas = map(models, broom::tidy)) 
+``` 
+
+#### R-squared
+
+```{r}
+rsq_df = 
+  weather_bootstrap %>% 
+  select(-strap, -models) %>% 
+  unnest(results_rsq) %>% 
+  select(id = .id, rsq = r.squared)
+
+rsq_plot =
+  rsq_df %>%
+  ggplot(aes(x = rsq)) + 
+  geom_density() + 
+  labs(
+    title = "Distribution of r-squared",
+    x = "r-squared value"
+  )
+
+rsq_plot
+```
+
+The distribution of r-squared is approximately normal, centered around 0.91 with a slight left skew. 
+
+#### Log(β0∗β1)
+
+```{r}
+betas_df = 
+  weather_bootstrap %>% 
+  select(-strap, -models) %>% 
+  unnest(results_betas) %>% 
+  select(id = .id, term, estimate) %>% 
+  pivot_wider(
+    names_from = term,
+    values_from = estimate
+  ) %>% 
+  select(id, b0 = `(Intercept)`, b1 = tmin) %>% 
+  mutate(
+    log_betas = log(b0 * b1)
+  )
+
+betas_plot = 
+  betas_df %>% 
+  ggplot(aes(x = log_betas)) +
+  geom_density() +
+  labs(
+    title = "Distribution of log(β0∗β1)",
+    x = "log(β0∗β1)"
+  )
+
+betas_plot
+```
+
+The distribution of log(β0∗β1) is also approximately normal, centered around 2.02 with a very slight right skew.
+
+
+## 95% Confidence Intervals for r^2 and log(β0∗β1)
+
+```{r}
+full_df = 
+  left_join(rsq_df, betas_df, by = "id") %>% 
+  select(-b0, -b1)
+
+full_df %>% 
+  summarize(
+    rsq_ci_lower = quantile(rsq, 0.025),
+    rsq_ci_upper = quantile(rsq, 0.975),
+    betas_ci_lower = quantile(log_betas, 0.025),
+    betas_ci_upper = quantile(log_betas, 0.975)
+  ) %>% 
+  knitr::kable(
+    col.names = c("R^2 CI lower bound", 
+                  "R^2 CI upper bound",
+                  "Log(β0∗β1) CI upper bound",
+                  "Log(β0∗β1) CI lower bound"),
+    digits = 3)
+```
 
 
 
